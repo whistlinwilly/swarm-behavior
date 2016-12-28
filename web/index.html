@@ -1,27 +1,22 @@
-<html>
+<!DOCTYPE html >
+<html >
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <title>Swarms</title>
+    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    <script type="text/javascript" src="http://x3dom.org/x3dom/dist/x3dom-full.js"></script>
+    <script type="text/javascript" src="swarm.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://www.x3dom.org/download/dev/x3dom.css"/>
+  </head>
   <body>
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <div id="divPlot"></div>
     <script>
-      var nums = [80, 53, 125, 200, 28, 97];
-      var svg = d3.select('body').append('svg')
-        .attr('width', 200)
-        .attr('height', 200);
-      d3.select('body').style('text-align', 'center').style('margin-top', '10%');
-
-      var bars = svg.selectAll('rect')
-        .data(nums);
-
-      bars.enter().append('rect');
-      bars.attr('x', function(d, i) {
-        return 35*i;
-      });
-      bars.attr('y', function(d, i) {
-        return 200 - d;
-      })
-      bars.attr('height', function(d, i) {
-        return d;
-      });
-      bars.attr('width', 30);
+      d3.select('html').style('height','100%').style('width','100%');
+      d3.select('body').style('height','92%').style('width','92%')
+        .style('margin-left', '3%').style('margin-top', '3%');
+      d3.select('#divPlot').style('width', "100%").style('height', "100%");
+      scatterPlot3d( d3.select('#divPlot'));
     </script>
   </body>
 </html>
