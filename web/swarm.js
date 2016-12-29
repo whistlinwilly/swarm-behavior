@@ -17,7 +17,6 @@ function scatterPlot3d( parent )
      .attr( "zNear", -10)
      .attr( "zFar", 10)
 
-  var rows = initializeDataGrid();
   var axisRange = [0, 200];
   var scales = [];
   var initialDuration = 0;
@@ -176,7 +175,7 @@ function scatterPlot3d( parent )
   }
 
   // Update the data points (spheres) and stems.
-  function plotData( duration ) {
+  function plotData( duration, rows) {
 
     if (!rows) {
      console.log("no rows to plot.")
@@ -209,57 +208,54 @@ function scatterPlot3d( parent )
     datapoints.transition().ease(ease).duration(duration)
         .attr("translation", function(row) {
           return x(row[axisKeys[0]]) + " " + y(row[axisKeys[1]]) + " " + z(row[axisKeys[2]])})
-
-    // Draw a stem from the x-z plane to each sphere at elevation y.
-    // This convention was chosen to be consistent with x3d primitive ElevationGrid.
-    // var stems = scene.selectAll(".stem").data( rows );
-    // stems.exit().remove();
-    //
-    // var newStems = stems.enter()
-    //   .append("transform")
-    //     .attr("class", "stem")
-    //   .append("shape");
-    // newStems
-    //   .append("appearance")
-    //   .append("material")
-    //     .attr("emissiveColor", "gray")
-    // newStems
-    //   .append("polyline2d")
-    //     .attr("lineSegments", function(row) { return "0 1, 0 0"; })
-    //
-    // stems.transition().ease(ease).duration(duration)
-    //     .attr("translation",
-    //        function(row) { return x(row[axisKeys[0]]) + " 0 " + z(row[axisKeys[2]]); })
-    //     .attr("scale",
-    //        function(row) { return [1, y(row[axisKeys[1]])]; })
   }
 
-  function initializeDataGrid() {
-    var rows = [];
-    // Follow the convention where y(x,z) is elevation.
-    for (var x=-100; x<=100; x+=10) {
-      for (var z=-100; z<=100; z+=10) {
-        rows.push({x: x, y: 0, z: z});
-     }
-    }
-    return rows;
-  }
+  // function initializeDataGrid() {
+  //   var rows = [];
+  //   // Follow the convention where y(x,z) is elevation.
+  //   for (var x=-100; x<=100; x+=10) {
+  //     for (var z=-100; z<=100; z+=10) {
+  //       rows.push({x: x, y: 0, z: z});
+  //    }
+  //   }
+  //   return rows;
+  // }
 
   function updateData() {
-    time += Math.PI/8;
     if ( x3d.node() && x3d.node().runtime ) {
-      for (var r=0; r<rows.length; ++r) {
-        var x = rows[r].x;
-        var z = rows[r].z;
-        rows[r].y = 100*( Math.sin(0.5*x + time) * Math.cos(0.25*z + time));
+      var rows = [];
+      var json = get("http://localhost:8080/swarm");
+      var pos = JSON.parse(json);
+      for (var r=0; r<pos.Actors.length; ++r) {
+        rows.push(pos.Actors[r])
       }
-      plotData( defaultDuration );
+      plotData( defaultDuration, rows );
     } else {
       console.log('x3d not ready.');
     }
+
+
+    // time += Math.PI/8;
+    // if ( x3d.node() && x3d.node().runtime ) {
+    //   for (var r=0; r<rows.length; ++r) {
+    //     var x = rows[r].x;
+    //     var z = rows[r].z;
+    //     rows[r].y = 100*( Math.sin(0.5*x + time) * Math.cos(0.25*z + time));
+    //   }
+    //   plotData( defaultDuration );
+    // } else {
+    //   console.log('x3d not ready.');
+    // }
   }
 
-  initializeDataGrid();
+  function get(url){
+    var req = new XMLHttpRequest();
+    req.open("GET", url, false);
+    req.send(null);
+    return req.responseText;
+  }
+
+//  initializeDataGrid();
   initializePlot();
   setInterval( updateData, defaultDuration );
 }
