@@ -20,7 +20,7 @@ function scatterPlot3d( parent )
   var axisRange = [0, 200];
   var scales = [];
   var initialDuration = 0;
-  var defaultDuration = 800;
+  var defaultDuration = 100;
   var ease = 'linear';
   var time = 0;
   var axisKeys = ["x", "y", "z"]
@@ -227,7 +227,7 @@ function scatterPlot3d( parent )
       var json = get("http://localhost:8080/swarm");
       var pos = JSON.parse(json);
       for (var r=0; r<pos.Actors.length; ++r) {
-        rows.push(pos.Actors[r])
+        rows.push(pos.Actors[r].position)
       }
       plotData( defaultDuration, rows );
     } else {
