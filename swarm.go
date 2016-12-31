@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/rand"
 	"net/http"
 	"os/exec"
@@ -18,15 +17,31 @@ type Swarm struct {
 	config swarmConfig
 }
 
+// For now, just return all other actors
+func (s *Swarm) FindClosestN(a Actor, n int) []Actor {
+	var actors []Actor
+	for i := range s.Actors {
+		if s.Actors[i] != a {
+			actors = append(actors, s.Actors[i])
+		}
+	}
+	return actors
+}
+
 type swarmConfig struct {
 	maxX, minX, maxY, minY, maxZ, minZ int
 	targetSelector                     func(*Swarm) vector.Vector
 	actorPositionUpdater               func(*Swarm)
+	separationSetSize                  int
+	separationWeight                   float64
+	alignmentWeight                    float64
+	cohesionWeight                     float64
 }
 
 type Actor struct {
 	Position     vector.Vector `json:"position"`
 	IsLeader     bool          `json:"leader"`
+	lastVelocity vector.Vector
 	velocity     vector.Vector
 	acceleration float64
 	deceleration float64
@@ -52,18 +67,52 @@ func DumbSwarmUpdater(s *Swarm) {
 	}
 }
 
+// TODO: refactor magic constants into config
 func MoveLeaderToTargetUpdater(s *Swarm) {
 	for i := range s.Actors {
-		a := s.Actors[i]
-		if a.IsLeader {
-			d := s.Target.Subtract(s.Actors[i].Position)
-			length := math.Sqrt(math.Pow(d.X, 2) + math.Pow(d.Y, 2) + math.Pow(d.Z, 2))
-			if length < 15.0 { //hacky, but only one leader right now
+		delta := vector.Zero()
+		if s.Actors[i].IsLeader {
+			delta = s.Target.Subtract(s.Actors[i].Position)
+			if delta.Length() < 15.0 { //hacky, but only one leader right now
 				s.NextTarget()
 			}
-			s.Actors[i].velocity = a.velocity.Scale(a.deceleration).Add(d.Scale(1 / length).Scale(a.acceleration))
-			s.Actors[i].Position = a.Position.Add(a.velocity)
+		} else {
+			// Followers currently follow a linear combination of
+			// a) Separation (short range repulsion)
+			// b) Alignment (average heading of neighbors)
+			// c) Cohesion (average position of neighbors)
+			separationDelta := vector.Zero()
+			alignmentDelta := vector.Zero()
+			cohesionDelta := vector.Zero()
+
+			neighbors := s.FindClosestN(s.Actors[i], s.config.separationSetSize)
+
+			for j := range neighbors {
+				fmt.Println("Neighbor position:", neighbors[j].Position)
+				fmt.Println("My position:", s.Actors[i].Position)
+				actorToNeighbor := neighbors[j].Position.Subtract(s.Actors[i].Position)
+				fmt.Println("Actor to neighbor:", actorToNeighbor)
+				actorToNeighborLength := actorToNeighbor.Length()
+				// Separation
+				if actorToNeighborLength < 5.0 {
+					separationDelta = separationDelta.Add(actorToNeighbor.Scale(-1.0))
+				}
+				// Alignment
+				alignmentDelta = alignmentDelta.Add(neighbors[j].lastVelocity)
+				// Cohesion
+				cohesionDelta = cohesionDelta.Add(actorToNeighbor)
+			}
+			separationDelta = separationDelta.Normalize()
+			alignmentDelta = alignmentDelta.Normalize()
+			cohesionDelta = cohesionDelta.Normalize()
+
+			delta = separationDelta.Scale(s.config.separationWeight).Add(alignmentDelta.Scale(s.config.alignmentWeight)).Add(cohesionDelta.Scale(s.config.cohesionWeight))
 		}
+		s.Actors[i].velocity = s.Actors[i].velocity.Scale(s.Actors[i].deceleration).Add(delta.Normalize().Scale(s.Actors[i].acceleration))
+	}
+	for i := range s.Actors {
+		s.Actors[i].Position = s.Actors[i].Position.Add(s.Actors[i].velocity)
+		s.Actors[i].lastVelocity = s.Actors[i].velocity
 	}
 }
 
@@ -82,7 +131,15 @@ func RandomTargetSelector(s *Swarm) vector.Vector {
 func main() {
 	testSwarm := &Swarm{
 		Actors: []Actor{
-			{IsLeader: true, deceleration: 0.8, acceleration: 1.1},
+			{IsLeader: true, deceleration: 0.8, acceleration: 1.1, Position: vector.Zero()},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: 10.0, Z: 10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: 10.0, Z: 10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: -10.0, Z: 10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: 10.0, Z: -10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: 10.0, Z: -10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: -10.0, Z: -10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: -10.0, Z: 10.0}},
+			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: -10.0, Z: -10.0}},
 		},
 		config: swarmConfig{
 			minX:                 -100,
@@ -93,6 +150,10 @@ func main() {
 			maxZ:                 100,
 			targetSelector:       RandomTargetSelector,
 			actorPositionUpdater: MoveLeaderToTargetUpdater,
+			separationSetSize:    10,
+			separationWeight:     5.0,
+			alignmentWeight:      1.0,
+			cohesionWeight:       1.5,
 		},
 	}
 	testSwarm.NextTarget()
