@@ -28,6 +28,20 @@ func (s *Swarm) FindClosestN(a Actor, n int) []Actor {
 	return actors
 }
 
+func (s *Swarm) AddFollowers(interval []float64) {
+	for _, x := range interval {
+		s.Actors = append(s.Actors,
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: x, Y: x, Z: x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -1.0 * x, Y: x, Z: x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: x, Y: -1.0 * x, Z: x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: x, Y: x, Z: -1.0 * x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -1.0 * x, Y: x, Z: -1.0 * x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: x, Y: -1.0 * x, Z: -1.0 * x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -1.0 * x, Y: -1.0 * x, Z: x}},
+			Actor{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -1.0 * x, Y: -1.0 * x, Z: -1.0 * x}})
+	}
+}
+
 type swarmConfig struct {
 	maxX, minX, maxY, minY, maxZ, minZ int
 	targetSelector                     func(*Swarm) vector.Vector
@@ -88,13 +102,10 @@ func MoveLeaderToTargetUpdater(s *Swarm) {
 			neighbors := s.FindClosestN(s.Actors[i], s.config.separationSetSize)
 
 			for j := range neighbors {
-				fmt.Println("Neighbor position:", neighbors[j].Position)
-				fmt.Println("My position:", s.Actors[i].Position)
 				actorToNeighbor := neighbors[j].Position.Subtract(s.Actors[i].Position)
-				fmt.Println("Actor to neighbor:", actorToNeighbor)
 				actorToNeighborLength := actorToNeighbor.Length()
 				// Separation
-				if actorToNeighborLength < 5.0 {
+				if actorToNeighborLength < 15.0 {
 					separationDelta = separationDelta.Add(actorToNeighbor.Scale(-1.0))
 				}
 				// Alignment
@@ -132,14 +143,6 @@ func main() {
 	testSwarm := &Swarm{
 		Actors: []Actor{
 			{IsLeader: true, deceleration: 0.8, acceleration: 1.1, Position: vector.Zero()},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: 10.0, Z: 10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: 10.0, Z: 10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: -10.0, Z: 10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: 10.0, Z: -10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: 10.0, Z: -10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: 10.0, Y: -10.0, Z: -10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: -10.0, Z: 10.0}},
-			{IsLeader: false, deceleration: 0.8, acceleration: 1.1, Position: vector.Vector{X: -10.0, Y: -10.0, Z: -10.0}},
 		},
 		config: swarmConfig{
 			minX:                 -100,
@@ -151,11 +154,12 @@ func main() {
 			targetSelector:       RandomTargetSelector,
 			actorPositionUpdater: MoveLeaderToTargetUpdater,
 			separationSetSize:    10,
-			separationWeight:     5.0,
-			alignmentWeight:      1.0,
-			cohesionWeight:       1.5,
+			separationWeight:     3.0,
+			alignmentWeight:      1.2,
+			cohesionWeight:       1.4,
 		},
 	}
+	testSwarm.AddFollowers([]float64{8.0, 16.0, 24.0, 30.0, 36.0})
 	testSwarm.NextTarget()
 
 	mux := http.NewServeMux()

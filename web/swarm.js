@@ -210,42 +210,20 @@ function scatterPlot3d( parent )
           return x(row[axisKeys[0]]) + " " + y(row[axisKeys[1]]) + " " + z(row[axisKeys[2]])})
   }
 
-  // function initializeDataGrid() {
-  //   var rows = [];
-  //   // Follow the convention where y(x,z) is elevation.
-  //   for (var x=-100; x<=100; x+=10) {
-  //     for (var z=-100; z<=100; z+=10) {
-  //       rows.push({x: x, y: 0, z: z});
-  //    }
-  //   }
-  //   return rows;
-  // }
-
   function updateData() {
     if ( x3d.node() && x3d.node().runtime ) {
       var rows = [];
       var json = get("http://localhost:8080/swarm");
       var pos = JSON.parse(json);
       for (var r=0; r<pos.Actors.length; ++r) {
-        rows.push(pos.Actors[r].position)
+        if (pos.Actors[r].leader != true) {
+          rows.push(pos.Actors[r].position);
+        }
       }
       plotData( defaultDuration, rows );
     } else {
       console.log('x3d not ready.');
     }
-
-
-    // time += Math.PI/8;
-    // if ( x3d.node() && x3d.node().runtime ) {
-    //   for (var r=0; r<rows.length; ++r) {
-    //     var x = rows[r].x;
-    //     var z = rows[r].z;
-    //     rows[r].y = 100*( Math.sin(0.5*x + time) * Math.cos(0.25*z + time));
-    //   }
-    //   plotData( defaultDuration );
-    // } else {
-    //   console.log('x3d not ready.');
-    // }
   }
 
   function get(url){
