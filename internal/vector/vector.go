@@ -31,7 +31,7 @@ func (a Vector) Normalize() Vector {
 	if l == 0 {
 		return a
 	} else {
-		return a.Scale(1 / l)
+		return a.Scale(1.0 / l)
 	}
 }
 
